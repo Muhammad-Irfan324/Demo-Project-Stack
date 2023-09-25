@@ -50,3 +50,16 @@ Port set for app -- [file](./src/main/resources/application.properties).
   
 
 **Tag OF EC2 Instance for this is Task-01-EC2-CI/CD-SpringBoot-App**  
+
+# CodePipeline
+
+ ![CODEPIPELINE](https://github.com/Muhammad-Irfan324/Demo-Project-Stack/blob/main/Selection_999(289).png)
+
+# IAM Roles
+
+ ![IAMROLE](https://github.com/Muhammad-Irfan324/Demo-Project-Stack/blob/main/Selection_999(290).png)
+
+# Accessing via Public IP
+
+ ![Port80](https://github.com/Muhammad-Irfan324/Demo-Project-Stack/blob/main/Selection_999(291).png)
+ ![Port80-health](https://github.com/Muhammad-Irfan324/Demo-Project-Stack/blob/main/Selection_999(292).png)

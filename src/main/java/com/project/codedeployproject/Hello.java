@@ -9,6 +9,6 @@ class Hello {
 
     @RequestMapping("/")
     String index() {
-        return "Hello world";
+        return "Hello world, Testing CodePipeline.";
     }
 }

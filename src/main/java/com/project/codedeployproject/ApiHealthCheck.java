@@ -10,6 +10,6 @@ public class ApiHealthCheck {
  
     @GetMapping("/health")
     public ResponseEntity<?> healthCheck() {
-        return ResponseEntity.ok("It works successfully.");
+        return ResponseEntity.ok("It works successfully, Testing CodePipeline");
     }
 }
