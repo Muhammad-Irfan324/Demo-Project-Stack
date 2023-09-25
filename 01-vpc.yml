@@ -1,0 +1,223 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Custom VPC with 2 public and 2 private subnet, along with routing and NAT Gateways. And SNS Topic
+
+Parameters:
+  VpcCIDR:
+    Description: CIDR block for the VPC
+    Type: String
+    Default: "10.0.0.0/16"
+  PublicAZ1:
+    Description: Public Subnet CIDR
+    Type: String
+    Default: "10.0.1.0/24"
+  PublicAZ2:
+    Description: Public Subnet CIDR
+    Type: String
+    Default: "10.0.2.0/24"    
+  PrivateAZ1:
+    Description: Private Subnet CIDR
+    Type: String
+    Default: "10.0.3.0/24"
+  PrivateAZ2:
+    Description: Private Subnet CIDR
+    Type: String
+    Default: "10.0.4.0/24"  
+  AZ1:
+    Description: Availability Zone
+    Type: String
+    Default: "us-east-1a" 
+  AZ2:
+    Description: Availability Zone
+    Type: String
+    Default: "us-east-1b"
+  SNSTopicName:
+    Default: 'SNS-TOPIC'
+    Description: 'Set SNS Topic name'
+    Type: String
+
+
+Resources:
+  # Create VPC
+  MyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+
+  # Create Public Subnet
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PublicAZ1
+      AvailabilityZone: !Ref AZ1
+      MapPublicIpOnLaunch: true
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PublicAZ2
+      AvailabilityZone: !Ref AZ2
+      MapPublicIpOnLaunch: true
+  
+  # Create Private Subnet
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PrivateAZ1
+      AvailabilityZone: !Ref AZ1
+  
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MyVPC
+      CidrBlock: !Ref PrivateAZ2
+      AvailabilityZone: !Ref AZ2    
+  
+  # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  VPCGatewayAttachment:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref MyVPC
+      InternetGatewayId: !Ref InternetGateway    
+
+# Route Table Entry For Public Subnet
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable      
+
+# NAT Gateway
+  NATGateway1ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  
+  NATGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGateway1ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1     
+  
+  NATGateway2ElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  
+  NATGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGateway2ElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet2 
+
+
+# Route Table For Private Subnet 
+  PrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PrivateRouteToInternet1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway1
+
+  PrivateSubnetRouteTableAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable1
+
+  PrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MyVPC
+
+  PrivateRouteToInternet2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway2
+
+  PrivateSubnetRouteTableAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable2      
+
+### SNS TOPIC
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Subscription:
+        - { Protocol: email, Endpoint: "muhammad.irfan.tahir93@gmail.com" }
+      TopicName: !Ref SNSTopicName  
+
+
+###Output the Values to use in other stacks 
+
+Outputs:
+  ExportedVpcId:
+    Description: VPC ID of MyVPC
+    Value: !Ref MyVPC
+    Export:
+      Name: "ExportedVpcId"
+
+  ExportedPublicSubnet1:
+    Description: Subnet ID of PublicSubnet1
+    Value: !Ref PublicSubnet1
+    Export:
+      Name: "ExportedPublicSubnet1"
+
+  ExportedPublicSubnet2:
+    Description: Subnet ID of PublicSubnet2
+    Value: !Ref PublicSubnet2
+    Export:
+      Name: "ExportedPublicSubnet2"  
+
+  ExportedPrivateSubnet1:
+    Description: Subnet ID of PrivateSubnet1
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: "ExportedPrivateSubnet1"
+
+  ExportedPrivateSubnet2:
+    Description: Subnet ID of PrivateSubnet2
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: "ExportedPrivateSubnet2"        
+
+  SNSTopic:
+    Description: 'SNS-TOPIC.'
+    Value: !Ref 'SNSTopic'
+    Export:
+      Name:  'ExportedSNSTopic'      

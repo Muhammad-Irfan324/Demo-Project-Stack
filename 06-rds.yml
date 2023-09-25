@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'RDS INSTANCE'
+
+Parameters:
+  DBInstanceIdentifier:
+    Description: Identifier for the RDS instance
+    Type: String
+    Default: MYRDS
+  DBMasterUsername:
+    Description: Master username for the RDS instance
+    Type: String
+    Default: root
+
+Resources:
+
+  MyDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: DB subnet group for MYRDS
+      DBSubnetGroupName: MyDBSubnetGroup
+      SubnetIds: 
+        - !ImportValue ExportedPrivateSubnet1
+        - !ImportValue ExportedPrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: MyDBSubnetGroup
+
+  MyDBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      MasterUsername: !Ref DBMasterUsername
+      AllocatedStorage: '8'
+      DBInstanceClass: db.t2.micro
+      Engine: mysql
+      EngineVersion: 8.0.33
+      ManageMasterUserPassword: true
+      PubliclyAccessible: false
+      DBSubnetGroupName: !Ref MyDBSubnetGroup
+      VPCSecurityGroups: 
+        - !ImportValue ExportedRDSSecGroup

@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Groups For ASG Instances, ALB, RDS and Bastion'
+
+Resources:
+
+  ##BASTION SECURITY GROUP
+  BastionSecGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for Bastion
+      VpcId: !ImportValue ExportedVpcId
+      SecurityGroupIngress:
+        - { FromPort: 80, ToPort: 80, IpProtocol: tcp, CidrIp: 0.0.0.0/0 }
+        - { FromPort: 22, ToPort: 22, IpProtocol: tcp, CidrIp: 0.0.0.0/0 }
+      Tags:
+        - { Key: Name, Value: !Sub '${AWS::StackName}-BastionSecGroup' }  
+
+
+  ##APPLICATION LOADBALANCER SECURITY GROUP
+  ALBSecGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for ALB
+      VpcId: !ImportValue ExportedVpcId
+      SecurityGroupIngress:
+        - { FromPort: 80, ToPort: 80, IpProtocol: tcp, SourceSecurityGroupId: !Ref 'BastionSecGroup' }
+      Tags:
+        - { Key: Name, Value: !Sub '${AWS::StackName}-ALBSecGroup' }
+
+
+##ASG SECURITY GROUP  
+  ASGSecGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for ASG
+      VpcId: !ImportValue ExportedVpcId
+      SecurityGroupIngress:
+        - { FromPort: 22, ToPort: 22, IpProtocol: tcp, SourceSecurityGroupId: !Ref 'BastionSecGroup' }
+        - { FromPort: 8080, ToPort: 8080, IpProtocol: tcp, SourceSecurityGroupId: !Ref 'ALBSecGroup' }
+      Tags:
+        - { Key: Name, Value: !Sub '${AWS::StackName}-ASGSecGroup' }
+
+##RDS SECURITY GROUP  
+  RDSSecGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Security group for RDS
+      VpcId: !ImportValue ExportedVpcId
+      SecurityGroupIngress:
+        - { FromPort: 3306, ToPort: 3306, IpProtocol: tcp, SourceSecurityGroupId: !Ref 'ASGSecGroup' }
+        
+      Tags:
+        - { Key: Name, Value: !Sub '${AWS::StackName}-RDSGroup' }
+
+
+Outputs:
+  BastionSecGroup:
+    Description: Security group for Bastion.
+    Value: !Ref 'BastionSecGroup'
+    Export:
+      Name: "ExportedBastionSecGroup"  
+
+  ALBSecGroup:
+    Description: Security group for ALB.
+    Value: !Ref 'ALBSecGroup'
+    Export:
+      Name: "ExportedALBSecGroup"
+
+  ASGSecGroup:
+    Description: Security group for ASG.
+    Value: !Ref 'ASGSecGroup'
+    Export:
+      Name: "ExportedASGSecGroup"
+
+  RDSSecGroup:
+    Description: Security group for ASG.
+    Value: !Ref 'RDSSecGroup'
+    Export:
+      Name: "ExportedRDSSecGroup"      
